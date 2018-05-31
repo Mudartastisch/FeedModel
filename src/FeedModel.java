@@ -70,7 +70,7 @@ public class FeedModel {
     public Entry findEntryByID(String ID) {
         List<Entry> entries = feed.getEntry();
         for (Entry e : entries) {
-            if (e.getId() == ID) {
+            if (e.getId().equals(ID)) {
                 return e;
             }
         }
@@ -106,36 +106,55 @@ public class FeedModel {
         nextEntry.setLink(nextEntryLink);
         //summary
         nextEntry.setSummary(summary);
-        try {
-            feed.getEntry().add(0, nextEntry);
-            unmarshaller.setSchema(schema);
-            unmarshaller.setEventHandler(new handleEvent());
-        } catch (RuntimeException e) {
-            e.printStackTrace();
+
+        /*
+         Test if Article already exists (by ID)     
+         */
+        Entry duplicate = findEntryByID(nextEntry.getId());
+        if (duplicate == null) {
+            try {
+                feed.getEntry().add(0, nextEntry);
+                unmarshaller.setSchema(schema);
+                unmarshaller.setEventHandler(new handleEvent());
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+            }
+            feed.getEntry().get(0).setUpdated(getXMLGregorianCalendarNow());
+            boolean bool = false;
+
+            try {
+
+                // tries to create new file in the system
+                bool = FEED_FILE.createNewFile();
+
+                // prints
+                System.out.println("File exists already: " + bool);
+
+                // deletes file from the system
+                FEED_FILE.delete();
+
+                // delete() is invoked
+                System.out.println("delete() method is invoked");
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            marshaller.marshal(feed, new FileOutputStream("feed.xml"));
+            String output = feed.getEntry().get(0).getId();
+            return output;
+            
+        } else {
+            StringBuilder out = new StringBuilder();
+            out.append("\nFound entry with same ID\n");
+            out.append("ID: ").append(duplicate.getId()).append("\n");
+            out.append("Title: ").append(duplicate.getTitle()).append("\n");
+            out.append("Updated: ").append(duplicate.getUpdated()).append("\n");
+            out.append("Author: ").append(duplicate.getAuthor().getName()).append("\n");
+            out.append("Link: ").append(duplicate.getLink().getHref()).append("\n");
+            out.append("Summary: ").append(duplicate.getSummary()).append("\n");
+            System.out.println(out.toString());
+            return "Did not add entry";
         }
-        feed.getEntry().get(0).setUpdated(getXMLGregorianCalendarNow());
-        boolean bool = false;
-
-        try {
-
-            // tries to create new file in the system
-            bool = FEED_FILE.createNewFile();
-
-            // prints
-            System.out.println("File created: " + bool);
-
-            // deletes file from the system
-            FEED_FILE.delete();
-
-            // delete() is invoked
-            System.out.println("delete() method is invoked");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        marshaller.marshal(feed, new FileOutputStream("feed.xml"));
-
-        return feed.getEntry().get(0).getId();
     }
 
     // TO DO Implement the functionality specified in the assignment
@@ -148,7 +167,7 @@ public class FeedModel {
      */
     public static void main(String[] args) throws JAXBException, FileNotFoundException {
         FeedModel model = new FeedModel();
-        model.addEntry("TestTitle", "http://test.de/test", "A test for addEntry function", "117516");
+        System.out.println(model.addEntry("TestTitle", "http://test.de/test", "A test for addEntry function", "117516"));
 
     }
 
